@@ -18,9 +18,33 @@ MS5837_PROM_READ=const(0xA0)
 MS5837_CONVERT_D1_8192=const(0x4A)
 MS5837_CONVERT_D2_8192=const(0x5A)
 
-Pa = 100.0
-bar = 0.001
-mbar = 1.0
+# Oversampling options
+OSR_256  = 0
+OSR_512  = 1
+OSR_1024 = 2
+OSR_2048 = 3
+OSR_4096 = 4
+OSR_8192 = 5
+
+# kg/m^3 convenience
+DENSITY_FRESHWATER = 997
+DENSITY_SALTWATER = 1029
+
+# Conversion factors (from native unit, mbar)
+UNITS_Pa     = 100.0
+UNITS_hPa    = 1.0
+UNITS_kPa    = 0.1
+UNITS_mbar   = 1.0
+UNITS_bar    = 0.001
+UNITS_atm    = 0.000986923
+UNITS_Torr   = 0.750062
+UNITS_psi    = 0.014503773773022
+
+# Valid units
+UNITS_Centigrade = 1
+UNITS_Farenheit  = 2
+UNITS_Kelvin     = 3
+
 
 MS5837_30BA = 0
 MS5837_02BA = 1
@@ -161,6 +185,30 @@ def pressure(P,conversion):
 #    TEMP = 2000l+int64_t(dT)*C[6]/8388608LL
 
 
+def crc4(n_prom):
+    n_rem = 0
+    
+    n_prom[0] = ((n_prom[0]) & 0x0FFF)
+    n_prom.append(0)
+
+    for i in range(16):
+        if i%2 == 1:
+            n_rem ^= ((n_prom[i>>1]) & 0x00FF)
+        else:
+            n_rem ^= (n_prom[i>>1] >> 8)
+            
+        for n_bit in range(8,0,-1):
+            if n_rem & 0x8000:
+                n_rem = (n_rem << 1) ^ 0x3000
+            else:
+                n_rem = (n_rem << 1)
+
+    n_rem = ((n_rem >> 12) & 0x000F)
+
+
+    return n_rem ^ 0x00
+
+
 
 
 
@@ -172,6 +220,13 @@ reset()
 
 C= getCalibration()
 
+# check crc4
+
+crc4_read = (C[0] & 0xF000) >> 12
+crc4_calc=crc4(C)
+
+print(crc4_read,crc4_calc)
+
 #print(C)
 
 D1,D2 = read()
@@ -179,6 +234,6 @@ D1,D2 = read()
 TEMP,P = calculate(C,D1,D2)
 
 print("temperature=",temperature(TEMP))
-print("pressure=",pressure(P,1.)) #mbar
+print("pressure=",pressure(P,UNITS_mbar)) #mbar
 
 #print(temp)
