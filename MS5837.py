@@ -209,7 +209,8 @@ def crc4(n_prom):
     return n_rem ^ 0x00
 
 
-
+def depth(P,fluidDensity):
+    return (pressure(P,UNITS_Pa)-101300)/(fluidDensity*9.80665)
 
 
 i2c = I2C(-1, Pin(SCL), Pin(SDA))
@@ -225,7 +226,9 @@ C= getCalibration()
 crc4_read = (C[0] & 0xF000) >> 12
 crc4_calc=crc4(C)
 
-print(crc4_read,crc4_calc)
+if (crc4_read != crc4_calc):
+    print("oops! crc doesn't compute")
+#print(crc4_read,crc4_calc)
 
 #print(C)
 
@@ -233,7 +236,15 @@ D1,D2 = read()
 
 TEMP,P = calculate(C,D1,D2)
 
-print("temperature=",temperature(TEMP))
-print("pressure=",pressure(P,UNITS_mbar)) #mbar
+t=temperature(TEMP)
+pres = pressure(P,UNITS_mbar)
+depth=depth(P,DENSITY_FRESHWATER)
+
+print("temperature=",t,"C")
+print("pressure=",pres,"mbar") #mbar
+
+print("depth=",depth, "meters")
+
+
 
 #print(temp)
